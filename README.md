@@ -1,0 +1,2 @@
+# scriptup
+ScriptAPI version updator
