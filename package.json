@@ -1,0 +1,27 @@
+{
+  "name": "scriptup",
+  "version": "1.0.0",
+  "description": "ScriptAPI version updator",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nano191225/scriptup.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Nano191225/scriptup/issues"
+  },
+  "homepage": "https://github.com/Nano191225/scriptup#readme",
+  "devDependencies": {
+    "@minecraft/server": "2.4.0",
+    "@minecraft/server-admin": "1.0.0-beta.1.21.130-stable",
+    "@minecraft/server-editor": "0.1.0-beta.1.21.130-stable",
+    "@minecraft/server-gametest": "1.0.0-beta.1.21.130-stable",
+    "@minecraft/server-ui": "1.3.0"
+  }
+}
