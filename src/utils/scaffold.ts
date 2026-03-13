@@ -348,7 +348,7 @@ jobs:
       - name: Make Archive
         run: |
           echo "Creating archive: \${{ steps.get-name.outputs.fileName }}"
-          files=$(jq -r '.files[]' package.json | tr '\n' ' ')
+          files=$(jq -r '.files[]' package.json | tr '\\n' ' ')
           zip -r "\${{ steps.get-name.outputs.fileName }}.mcpack" $files
           cp "\${{ steps.get-name.outputs.fileName }}.mcpack" "\${{ steps.get-name.outputs.fileName }}.zip"
 
