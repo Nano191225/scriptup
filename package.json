@@ -20,6 +20,7 @@
         "minecraft-script-api",
         "scriptapi"
     ],
+    "packageManager": "pnpm@10.26.0",
     "author": "Nano191225",
     "license": "MIT",
     "bugs": {
