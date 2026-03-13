@@ -14,7 +14,7 @@ const program = new Command();
 program
     .name("scriptup")
     .description("ScriptAPI version updater for Minecraft Bedrock")
-    .version("1.0.0")
+    .version("1.2.0")
     .argument("[version]", "Manually specify a version to look up");
 
 program

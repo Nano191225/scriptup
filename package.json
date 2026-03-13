@@ -1,10 +1,11 @@
 {
     "name": "@nano191225/scriptup",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "ScriptAPI version updater for Minecraft Bedrock",
     "main": "dist/index.js",
     "bin": {
-        "scriptup": "dist/index.js"
+        "scriptup": "dist/index.js",
+        "sup": "dist/index.js"
     },
     "scripts": {
         "build": "tsdown",
@@ -28,7 +29,8 @@
     },
     "homepage": "https://github.com/Nano191225/scriptup#readme",
     "publishConfig": {
-        "access": "public"
+        "access": "public",
+        "registry": "https://npm.pkg.github.com"
     },
     "files": [
         "dist"
