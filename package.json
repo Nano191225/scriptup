@@ -7,9 +7,8 @@
         "scriptup": "dist/index.js"
     },
     "scripts": {
-        "build": "tsc",
-        "dev": "tsc --watch",
-        "prepublishOnly": "npm run build"
+        "build": "tsdown",
+        "dev": "tsdown --watch"
     },
     "repository": {
         "type": "git",
@@ -17,9 +16,9 @@
     },
     "keywords": [
         "minecraft",
-        "bedrock",
-        "scriptapi",
-        "addon"
+        "minecraft-bedrock",
+        "minecraft-script-api",
+        "scriptapi"
     ],
     "author": "Nano191225",
     "license": "MIT",
@@ -27,13 +26,17 @@
         "url": "https://github.com/Nano191225/scriptup/issues"
     },
     "homepage": "https://github.com/Nano191225/scriptup#readme",
+    "publishConfig": {
+        "access": "public"
+    },
     "files": [
         "dist"
     ],
     "dependencies": {
         "chalk": "^5.4.1",
         "commander": "^13.1.0",
-        "ora": "^8.2.0"
+        "ora": "^8.2.0",
+        "tsdown": "^0.21.2"
     },
     "devDependencies": {
         "@types/node": "^22.13.0",

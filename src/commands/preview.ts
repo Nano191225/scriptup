@@ -1,5 +1,5 @@
 import ora from "ora";
-import { getManifest, updateManifest } from "../utils/manifest.js";
+import { getManifest, isManifestModuleDependency, updateManifest } from "../utils/manifest.js";
 import { getVersions, extractMcVersion, extractModuleVersion } from "../utils/versions.js";
 import { detectPackageManager, installPackage } from "../utils/package-manager.js";
 import * as logger from "../utils/logger.js";
@@ -21,7 +21,9 @@ export async function preview(): Promise<void> {
     }
     const modules: ModuleInfo[] = [];
 
-    for (const dependency of manifest.dependencies) {
+    const dependencies = manifest.dependencies?.filter(isManifestModuleDependency) ?? [];
+
+    for (const dependency of dependencies) {
         const versions = await getVersions(dependency.module_name);
         const matched = versions.find((v) => v.includes(mcVersion));
 

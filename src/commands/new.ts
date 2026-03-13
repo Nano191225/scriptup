@@ -1,0 +1,91 @@
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import * as logger from "../utils/logger.js";
+import { ensureNewProjectTarget, openProject, scaffoldProject } from "../utils/scaffold.js";
+
+interface NewCommandOptions {
+    open?: string;
+    preview?: boolean;
+    dir?: string;
+    link?: boolean;
+    workflow?: boolean;
+}
+
+const supportedEditors = ["code", "code-insiders"];
+
+export async function createNewProject(projectName: string, options: NewCommandOptions): Promise<void> {
+    const behaviorPacksDir = resolveBehaviorPacksDir(options.preview);
+    const targetDir = resolveProjectTargetDir(projectName, options, behaviorPacksDir);
+
+    ensureNewProjectTarget(targetDir);
+    await scaffoldProject({
+        targetDir,
+        projectName,
+        workflow: options.workflow,
+    });
+
+    if (options.dir && options.link !== false) {
+        const linkPath = path.join(behaviorPacksDir, projectName);
+        createBehaviorPackLink(targetDir, linkPath);
+    }
+
+    if (!options.open) return;
+
+    if (!supportedEditors.includes(options.open)) return logger.error(`Unsupported editor: ${options.open}`);
+
+    logger.info(`Opening project with ${options.open}...`);
+
+    try {
+        openProject(targetDir, options.open);
+    } catch (error) {
+        logger.error(`Failed to open project: ${error instanceof Error ? error.message : String(error)}`);
+        process.exit(1);
+    }
+}
+
+function resolveProjectTargetDir(projectName: string, options: NewCommandOptions, behaviorPacksDir: string): string {
+    if (options.dir) {
+        return path.resolve(options.dir, projectName);
+    }
+
+    return path.join(behaviorPacksDir, projectName);
+}
+
+function resolveBehaviorPacksDir(preview = false): string {
+    if (process.platform === "win32") {
+        const appDataPath = process.env.APPDATA;
+        if (!appDataPath) {
+            logger.error("APPDATA is not available. Use --dir to specify the destination manually.");
+            process.exit(1);
+        }
+
+        const minecraftFolder = preview ? "Minecraft Bedrock Preview" : "Minecraft Bedrock";
+
+        return path.join(appDataPath, minecraftFolder, "Users", "Shared", "games", "com.mojang", "development_behavior_packs");
+    }
+
+    const xdgDataHome = process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share");
+    return path.join(xdgDataHome, "mcpelauncher", "games", "com.mojang", "development_behavior_packs");
+}
+
+function createBehaviorPackLink(sourceDir: string, linkPath: string): void {
+    const resolvedSourceDir = path.resolve(sourceDir);
+    const resolvedLinkPath = path.resolve(linkPath);
+
+    if (resolvedSourceDir === resolvedLinkPath) {
+        return;
+    }
+
+    fs.mkdirSync(path.dirname(resolvedLinkPath), { recursive: true });
+
+    if (fs.existsSync(resolvedLinkPath)) {
+        logger.warn(`Link path already exists, skipping link creation: ${resolvedLinkPath}`);
+        return;
+    }
+
+    const linkType: fs.symlink.Type = process.platform === "win32" ? "junction" : "dir";
+    fs.symlinkSync(resolvedSourceDir, resolvedLinkPath, linkType);
+
+    logger.log(`Linked behavior pack: ${resolvedLinkPath} -> ${resolvedSourceDir}`);
+}
