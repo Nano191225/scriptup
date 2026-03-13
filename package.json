@@ -1,6 +1,6 @@
 {
     "name": "@nano191225/scriptup",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "ScriptAPI version updater for Minecraft Bedrock",
     "main": "dist/index.js",
     "bin": {
