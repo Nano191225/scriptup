@@ -252,7 +252,7 @@ function createPackageJson(
                   },
                   main: "./dist/main.js",
                   types: "./dist/main.d.ts",
-                prepublishOnly: "scriptup build --release && node .github/workflows/ensure-dts-export.js",
+                  prepublishOnly: "scriptup build --release && node .github/workflows/ensure-dts-export.js",
                   repository: `https://github.com/${getUsername() ?? "{{your-username}}"}/${directoryName}.git`,
               }
             : {}),
@@ -271,6 +271,10 @@ function createPackageJson(
 
 function createTsConfig(includeLibraryTemplate: boolean, libraryPackageName: string | null): Record<string, unknown> {
     const compilerOptions: Record<string, unknown> = {
+        module: "es2022",
+        target: "es2024",
+        moduleResolution: "node",
+        skipLibCheck: true,
         strict: true,
         noLib: true,
         types: ["@bedrock-apis/env-types"],
