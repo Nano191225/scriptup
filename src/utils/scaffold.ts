@@ -6,12 +6,14 @@ import { Manifest, ManifestDependency, ManifestVersion } from "./manifest.js";
 import { extractMcVersion, extractModuleVersion, getVersions } from "./versions.js";
 import * as logger from "./logger.js";
 import { VERSION } from "../constants.js";
+import { getUsername } from "./username.js";
 
 const DEFAULT_ENGINE_VERSION: [number, number, number] | string = "1.20.0";
 
 interface ScaffoldOptions {
     targetDir: string;
     projectName?: string;
+    directoryName?: string;
     lib?: boolean;
     workflow?: boolean;
 }
@@ -25,13 +27,14 @@ interface ResolvedDependencyInfo {
 export async function scaffoldProject(options: ScaffoldOptions): Promise<void> {
     const targetDir = path.resolve(options.targetDir);
     const projectName = options.projectName?.trim() || path.basename(targetDir);
+    const directoryName = options.directoryName?.trim() || projectName;
     const includeLibraryTemplate = options.lib === true;
     const includeWorkflow = options.workflow !== false;
 
     fs.mkdirSync(targetDir, { recursive: true });
 
     const dependencyInfo = await resolveDependencyInfo();
-    const files = createTemplateFiles(projectName, dependencyInfo, includeWorkflow, includeLibraryTemplate);
+    const files = createTemplateFiles(projectName, directoryName, dependencyInfo, includeWorkflow, includeLibraryTemplate);
 
     let createdCount = 0;
 
@@ -135,13 +138,14 @@ async function resolveDependencyInfo(): Promise<ResolvedDependencyInfo> {
 
 function createTemplateFiles(
     projectName: string,
+    directoryName: string,
     dependencyInfo: ResolvedDependencyInfo,
     includeWorkflow: boolean,
     includeLibraryTemplate: boolean,
 ): Record<string, string> {
     const libraryPackageName = includeLibraryTemplate ? resolveLibraryPackageName(projectName) : null;
     const manifest = createManifest(projectName, dependencyInfo.engineVersion, dependencyInfo.dependencies, includeLibraryTemplate);
-    const packageJson = createPackageJson(projectName, dependencyInfo.packageDependencies, includeLibraryTemplate, libraryPackageName);
+    const packageJson = createPackageJson(projectName, directoryName, dependencyInfo.packageDependencies, includeLibraryTemplate, libraryPackageName);
 
     const files: Record<string, string> = {
         ".gitignore": "node_modules/\nscripts\ndist\n*.mcpack\n*.mcaddon\n",
@@ -216,6 +220,7 @@ function createManifest(
 
 function createPackageJson(
     projectName: string,
+    directoryName: string,
     dependencies: Record<string, string>,
     includeLibraryTemplate: boolean,
     libraryPackageName: string | null,
@@ -247,7 +252,8 @@ function createPackageJson(
                   },
                   main: "./dist/main.js",
                   types: "./dist/main.d.ts",
-                  prepublishOnly: "scriptup build --release && node .github/workflows/ensure-dts-export.js",
+                prepublishOnly: "scriptup build --release && node .github/workflows/ensure-dts-export.js",
+                  repository: `https://github.com/${getUsername() ?? "{{your-username}}"}/${directoryName}.git`,
               }
             : {}),
         scripts: {
@@ -637,22 +643,7 @@ function resolveLibraryPackageName(projectName: string): string {
 
 function createLicense(): string {
     const year = new Date().getFullYear();
-    let author = "{{author}}";
-    try {
-        const gitNameResult = spawnSync("git", ["config", "user.name"], {
-            encoding: "utf-8",
-            shell: true,
-        });
-        if (gitNameResult.status === 0) {
-            const gitName = gitNameResult.stdout.trim();
-            if (gitName) {
-                author = gitName;
-            }
-        }
-    } catch (error) {
-        logger.warn(`Failed to get git user.name: ${error instanceof Error ? error.message : String(error)}`);
-        logger.warn("Using placeholder author name in LICENSE.");
-    }
+    const author = getUsername() || "{{author}}";
 
     return `MIT License
 
@@ -681,7 +672,7 @@ function normalizePackageName(projectName: string): string {
     const normalized = projectName
         .trim()
         .toLowerCase()
-        .replace(/[^a-z0-9-_\s]/g, "")
+        .replace(/[^a-z0-9-@\/_\s]/g, "")
         .replace(/\s+/g, "-")
         .replace(/-+/g, "-")
         .replace(/^-|-$/g, "");

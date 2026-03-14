@@ -23,7 +23,7 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
     }
 
     const userConfig = await loadTsdownConfig(path.resolve("tsdown.config.ts"));
-    const sourceEntry = getSourceEntry(userConfig);
+    const sourceEntry = getSourceEntry("src", userConfig);
     if (!sourceEntry) {
         logger.error("Source entry not found. Expected src/main.ts, src/index.ts, or tsdown.config.ts entry.");
         process.exit(1);
@@ -85,16 +85,18 @@ function ensureBuildOutput(outputEntry: string): void {
     }
 }
 
-function getSourceEntry(userConfig: UserConfig): string | null {
-    const mainEntry = path.resolve("src/main.ts");
+function getSourceEntry(directory: string, userConfig?: UserConfig): string | null {
+    const mainEntry = path.resolve(directory, "main.ts");
     if (fs.existsSync(mainEntry)) {
         return mainEntry;
     }
 
-    const indexEntry = path.resolve("src/index.ts");
+    const indexEntry = path.resolve(directory, "index.ts");
     if (fs.existsSync(indexEntry)) {
         return indexEntry;
     }
+
+    if (!userConfig) return null;
 
     const configuredEntry = resolveConfiguredEntry(userConfig.entry);
     if (!configuredEntry) {
@@ -148,8 +150,9 @@ async function loadTsdownConfig(configPath: string): Promise<UserConfig> {
 }
 
 async function buildLocalPackageDist(): Promise<void> {
-    const packageEntries = getPackageTypeScriptEntries(path.resolve("package"));
-    if (packageEntries.length === 0) {
+    // const packageEntries = getPackageTypeScriptEntries(path.resolve("package"));
+    const sourceEntry = getSourceEntry("package");
+    if (!sourceEntry) {
         return;
     }
 
@@ -157,7 +160,7 @@ async function buildLocalPackageDist(): Promise<void> {
 
     const packageBuildConfig: InlineConfig = {
         config: false,
-        entry: packageEntries.map((entry) => path.relative(process.cwd(), entry)),
+        entry: path.relative(process.cwd(), sourceEntry),
         outDir: path.relative(process.cwd(), path.resolve("dist")),
         format: "esm" as const,
         target: "es2024",
@@ -165,10 +168,13 @@ async function buildLocalPackageDist(): Promise<void> {
         clean: true,
         tsconfig: path.relative(process.cwd(), path.resolve("tsconfig.json")),
         outExtensions: () => ({ js: ".js" }),
-        unbundle: true,
         dts: true,
+        unbundle: false,
         deps: {
-            neverBundle: /^@minecraft\/(?!math(?:\/|$)|vanilla-data(?:\/|$))/,
+            // alwaysBundle: "**/*",
+            // neverBundle: /^@minecraft\/(?!math(?:\/|$)|vanilla-data(?:\/|$))/,
+            // neverBundle: "**/*",
+            // onlyBundle: false,
         }
     };
 

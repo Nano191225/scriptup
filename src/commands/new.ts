@@ -24,6 +24,7 @@ export async function createNewProject(projectName: string, options: NewCommandO
     await scaffoldProject({
         targetDir,
         projectName,
+        directoryName,
         lib: options.lib,
         workflow: options.workflow,
     });
@@ -56,11 +57,11 @@ function resolveProjectTargetDir(projectName: string, options: NewCommandOptions
 }
 
 function resolveProjectDirectoryName(projectName: string): string {
-    const replacedSeparators = projectName.trim().replace(/[\\/]+/g, "$");
-    const sanitized = replacedSeparators.replace(/[^A-Za-z0-9@$-_.]/g, "");
+    const replacedSeparators = projectName.trim().replace(/[\\/]+/g, "-");
+    const sanitized = replacedSeparators.replace(/[^A-Za-z0-9-_]/g, "");
 
     if (sanitized.length === 0) {
-        logger.error("Project name is empty after sanitizing. Use at least one of A-Z, a-z, 0-9, @, $, -, _, or .");
+        logger.error("Project name is empty after sanitizing. Use at least one of A-Z, a-z, 0-9, -, or _.");
         process.exit(1);
     }
 
