@@ -2,36 +2,40 @@
     "name": "@nano191225/scriptup",
     "version": "1.2.0",
     "description": "ScriptAPI version updater for Minecraft Bedrock",
-    "main": "dist/index.js",
-    "bin": {
-        "scriptup": "dist/index.js",
-        "sup": "dist/index.js"
-    },
-    "scripts": {
-        "build": "tsdown",
-        "dev": "tsdown --watch"
-    },
+    "license": "MIT",
+    "author": "Nano191225",
+    "homepage": "https://github.com/Nano191225/scriptup#readme",
     "repository": "https://github.com/Nano191225/scriptup.git",
+    "bugs": {
+        "url": "https://github.com/Nano191225/scriptup/issues"
+    },
     "keywords": [
         "minecraft",
         "minecraft-bedrock",
         "minecraft-script-api",
         "scriptapi"
     ],
-    "packageManager": "pnpm@10.26.0",
-    "author": "Nano191225",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/Nano191225/scriptup/issues"
-    },
-    "homepage": "https://github.com/Nano191225/scriptup#readme",
-    "publishConfig": {
-        "access": "public",
-        "registry": "https://npm.pkg.github.com"
+    "type": "module",
+    "main": "dist/index.js",
+    "bin": {
+        "scriptup": "dist/index.js",
+        "sup": "dist/index.js"
     },
     "files": [
         "dist"
     ],
+    "scripts": {
+        "build": "tsdown",
+        "dev": "tsdown --watch"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "packageManager": "pnpm@10.26.0",
+    "publishConfig": {
+        "access": "public",
+        "registry": "https://npm.pkg.github.com"
+    },
     "dependencies": {
         "chalk": "^5.4.1",
         "commander": "^13.1.0",
@@ -41,9 +45,5 @@
     "devDependencies": {
         "@types/node": "^22.13.0",
         "typescript": "^5.7.0"
-    },
-    "engines": {
-        "node": ">=18.0.0"
-    },
-    "type": "module"
+    }
 }
