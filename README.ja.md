@@ -8,11 +8,11 @@
 
 Minecraft Bedrock ScriptAPI 開発向けの CLI です。
 
-scriptup は、@minecraft/* の更新、ScriptAPI での外部ライブラリ利用、そして ScriptAPI 用ライブラリ作成の初期構築を素早く行えるようにします。
+scriptup は、@minecraft/\* の更新、ScriptAPI での外部ライブラリ利用、そして ScriptAPI 用ライブラリ作成の初期構築を素早く行えるようにします。
 
 ## モチベーション
 
-- @minecraft/* の更新を容易にする
+- @minecraft/\* の更新を容易にする
 - ScriptAPI で簡単に外部ライブラリを使えるようにする
 - ScriptAPI 用のライブラリを簡単に作れるようにする
 
@@ -102,8 +102,8 @@ scriptup 2.0.0-beta
 - 主要ファイルを生成（manifest.json, tsconfig.json, src/main.ts など）
 - tsdown.config.ts がなければ作成
 - package.json scripts を更新
-  - build: scriptup build --release
-  - watch: scriptup build --watch
+    - build: scriptup build --release
+    - watch: scriptup build --watch
 - 必要な devDependencies をインストール
 
 ### scriptup new <project-name>
@@ -122,11 +122,11 @@ scriptup 2.0.0-beta
 既定の作成先:
 
 - Windows stable:
-  - %APPDATA%/Minecraft Bedrock/Users/Shared/games/com.mojang/development_behavior_packs
+    - %APPDATA%/Minecraft Bedrock/Users/Shared/games/com.mojang/development_behavior_packs
 - Windows preview:
-  - %APPDATA%/Minecraft Bedrock Preview/Users/Shared/games/com.mojang/development_behavior_packs
+    - %APPDATA%/Minecraft Bedrock Preview/Users/Shared/games/com.mojang/development_behavior_packs
 - Linux (mcpelauncher):
-  - ${XDG_DATA_HOME:-~/.local/share}/mcpelauncher/games/com.mojang/development_behavior_packs
+    - ${XDG_DATA_HOME:-~/.local/share}/mcpelauncher/games/com.mojang/development_behavior_packs
 
 ### scriptup build
 
@@ -142,9 +142,9 @@ tsdown で現在の ScriptAPI プロジェクトをビルドします。
 
 - 出力先は manifest.json の script module entry から決定（例: scripts/main.js）
 - 入力エントリの優先順位
-  - src/main.ts
-  - src/index.ts
-  - tsdown.config.ts の entry
+    - src/main.ts
+    - src/index.ts
+    - tsdown.config.ts の entry
 - release モードでは package/ が存在する場合に package/\*\*/\*.ts も dist/ へ追加ビルド
 
 ## 典型的な使い方
