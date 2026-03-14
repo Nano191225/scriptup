@@ -31,7 +31,6 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
 
     const outputEntry = path.resolve(scriptModule.entry);
     const outputDir = path.dirname(outputEntry);
-    const alwaysBundleDependencies = getPackageJsonDependencies(path.resolve("package.json"));
     const isBundle = options.bundle === true;
     const isWatch = options.watch === true;
     const isRelease = options.release === true;
@@ -49,7 +48,7 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
         outExtensions: () => ({ js: ".js" }),
         deps: {
             neverBundle: /^@minecraft\/(?!math(?:\/|$)|vanilla-data(?:\/|$))/,
-            alwaysBundle: alwaysBundleDependencies,
+            alwaysBundle: "**/*",
             onlyBundle: false,
         },
         unbundle: !isRelease && !isBundle,
@@ -63,6 +62,10 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
 
     try {
         await tsdownBuild(finalConfig);
+
+        if (isRelease) {
+            await buildLocalPackageDist();
+        }
     } catch (error) {
         logger.error(error instanceof Error ? error.message : String(error));
         process.exit(1);
@@ -144,22 +147,65 @@ async function loadTsdownConfig(configPath: string): Promise<UserConfig> {
     }
 }
 
-function getPackageJsonDependencies(packageJsonPath: string): string[] {
-    if (!fs.existsSync(packageJsonPath)) {
-        logger.warn("package.json was not found. Skipping deps.alwaysBundle.");
+async function buildLocalPackageDist(): Promise<void> {
+    const packageEntries = getPackageTypeScriptEntries(path.resolve("package"));
+    if (packageEntries.length === 0) {
+        return;
+    }
+
+    logger.info("Building local package sources into dist/... ");
+
+    const packageBuildConfig: InlineConfig = {
+        config: false,
+        entry: packageEntries.map((entry) => path.relative(process.cwd(), entry)),
+        outDir: path.relative(process.cwd(), path.resolve("dist")),
+        format: "esm" as const,
+        target: "es2024",
+        platform: "neutral" as const,
+        clean: true,
+        tsconfig: path.relative(process.cwd(), path.resolve("tsconfig.json")),
+        outExtensions: () => ({ js: ".js" }),
+        unbundle: true,
+        dts: true,
+        deps: {
+            neverBundle: /^@minecraft\/(?!math(?:\/|$)|vanilla-data(?:\/|$))/,
+        }
+    };
+
+    await tsdownBuild(packageBuildConfig);
+}
+
+function getPackageTypeScriptEntries(packageDirPath: string): string[] {
+    if (!fs.existsSync(packageDirPath)) {
         return [];
     }
 
-    try {
-        const raw = fs.readFileSync(packageJsonPath, "utf-8");
-        const parsed = JSON.parse(raw) as {
-            dependencies?: Record<string, string>;
-        };
+    const entries: string[] = [];
+    const stack = [packageDirPath];
 
-        return Object.keys(parsed.dependencies ?? {});
-    } catch (error) {
-        logger.warn(`Failed to parse package.json dependencies: ${error instanceof Error ? error.message : String(error)}`);
-        logger.warn("Skipping deps.alwaysBundle.");
-        return [];
+    while (stack.length > 0) {
+        const currentDir = stack.pop();
+        if (!currentDir) {
+            continue;
+        }
+
+        const dirEntries = fs.readdirSync(currentDir, { withFileTypes: true });
+        for (const dirEntry of dirEntries) {
+            if (dirEntry.name === "node_modules" || dirEntry.name.startsWith(".")) {
+                continue;
+            }
+
+            const fullPath = path.join(currentDir, dirEntry.name);
+            if (dirEntry.isDirectory()) {
+                stack.push(fullPath);
+                continue;
+            }
+
+            if (dirEntry.isFile() && fullPath.endsWith(".ts") && !fullPath.endsWith(".d.ts")) {
+                entries.push(fullPath);
+            }
+        }
     }
+
+    return entries.sort();
 }

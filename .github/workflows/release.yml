@@ -5,14 +5,14 @@ on:
         tags:
             - "v*"
 
+permissions:
+    contents: read
+    id-token: write
+    
 jobs:
     publish:
         runs-on: ubuntu-latest
         timeout-minutes: 10
-
-        permissions:
-            contents: read
-            id-token: write
 
         steps:
             - name: Checkout

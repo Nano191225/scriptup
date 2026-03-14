@@ -8,6 +8,7 @@ interface NewCommandOptions {
     open?: string;
     preview?: boolean;
     dir?: string;
+    lib?: boolean;
     link?: boolean;
     workflow?: boolean;
 }
@@ -16,17 +17,19 @@ const supportedEditors = ["code", "code-insiders"];
 
 export async function createNewProject(projectName: string, options: NewCommandOptions): Promise<void> {
     const behaviorPacksDir = resolveBehaviorPacksDir(options.preview);
-    const targetDir = resolveProjectTargetDir(projectName, options, behaviorPacksDir);
+    const directoryName = resolveProjectDirectoryName(projectName);
+    const targetDir = resolveProjectTargetDir(directoryName, options, behaviorPacksDir);
 
     ensureNewProjectTarget(targetDir);
     await scaffoldProject({
         targetDir,
         projectName,
+        lib: options.lib,
         workflow: options.workflow,
     });
 
     if (options.dir && options.link !== false) {
-        const linkPath = path.join(behaviorPacksDir, projectName);
+        const linkPath = path.join(behaviorPacksDir, directoryName);
         createBehaviorPackLink(targetDir, linkPath);
     }
 
@@ -50,6 +53,18 @@ function resolveProjectTargetDir(projectName: string, options: NewCommandOptions
     }
 
     return path.join(behaviorPacksDir, projectName);
+}
+
+function resolveProjectDirectoryName(projectName: string): string {
+    const replacedSeparators = projectName.trim().replace(/[\\/]+/g, "$");
+    const sanitized = replacedSeparators.replace(/[^A-Za-z0-9@$-_.]/g, "");
+
+    if (sanitized.length === 0) {
+        logger.error("Project name is empty after sanitizing. Use at least one of A-Z, a-z, 0-9, @, $, -, _, or .");
+        process.exit(1);
+    }
+
+    return sanitized;
 }
 
 function resolveBehaviorPacksDir(preview = false): string {

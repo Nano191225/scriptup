@@ -35,9 +35,9 @@ function ensureTsdownConfig(targetDir: string): void {
     }
 
     const existing = fs.readFileSync(tsdownConfigPath, "utf-8");
-    const updated = existing.replace(/defineConfig\(([^)]*)\)/s, (_match, inner: string) => {
+    const updated = existing.replace(/defineConfig\({([^;]*)}\);/s, (_match, inner: string) => {
         const trimmed = inner.trim();
-        return trimmed.length === 0 ? "defineConfig(/* */)" : `defineConfig(/* ${trimmed} */)`;
+        return trimmed.length === 0 ? "defineConfig({ /* */ });" : `defineConfig({\n  /* ${trimmed} */\n});`;
     });
 
     if (updated === existing) {

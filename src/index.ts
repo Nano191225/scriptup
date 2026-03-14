@@ -8,13 +8,14 @@ import { manual } from "./commands/manual.js";
 import { init } from "./commands/init.js";
 import { createNewProject } from "./commands/new.js";
 import { build } from "./commands/build.js";
+import { VERSION } from "./constants.js";
 
 const program = new Command();
 
 program
     .name("scriptup")
     .description("ScriptAPI version updater for Minecraft Bedrock")
-    .version("1.2.0")
+    .version(VERSION)
     .argument("[version]", "Manually specify a version to look up");
 
 program
@@ -63,11 +64,17 @@ program
     .addOption(new Option("-o, --open [command]", "Open the project after creation").preset("code"))
     .option("-p, --preview", "Create the project in the Minecraft Bedrock Preview behavior packs directory")
     .option("-d, --dir <path>", "Create the project under a specific directory")
+    .option("--lib", "Include local library scaffolding under package/")
     .option("--no-link", "Do not create a link in the behavior packs directory when --dir is used")
     .option("--no-workflow", "Do not create the GitHub Actions workflow files")
-    .action(async (projectName: string, options: { open?: string; preview?: boolean; dir?: string; link?: boolean; workflow?: boolean }) => {
-        await createNewProject(projectName, options);
-    });
+    .action(
+        async (
+            projectName: string,
+            options: { open?: string; preview?: boolean; dir?: string; lib?: boolean; link?: boolean; workflow?: boolean },
+        ) => {
+            await createNewProject(projectName, options);
+        },
+    );
 
 program.action(async (version: string | undefined) => {
     if (version) {

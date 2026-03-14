@@ -5,12 +5,14 @@ import { randomUUID } from "node:crypto";
 import { Manifest, ManifestDependency, ManifestVersion } from "./manifest.js";
 import { extractMcVersion, extractModuleVersion, getVersions } from "./versions.js";
 import * as logger from "./logger.js";
+import { VERSION } from "../constants.js";
 
 const DEFAULT_ENGINE_VERSION: [number, number, number] | string = "1.20.0";
 
 interface ScaffoldOptions {
     targetDir: string;
     projectName?: string;
+    lib?: boolean;
     workflow?: boolean;
 }
 
@@ -23,12 +25,13 @@ interface ResolvedDependencyInfo {
 export async function scaffoldProject(options: ScaffoldOptions): Promise<void> {
     const targetDir = path.resolve(options.targetDir);
     const projectName = options.projectName?.trim() || path.basename(targetDir);
+    const includeLibraryTemplate = options.lib === true;
     const includeWorkflow = options.workflow !== false;
 
     fs.mkdirSync(targetDir, { recursive: true });
 
     const dependencyInfo = await resolveDependencyInfo();
-    const files = createTemplateFiles(projectName, dependencyInfo, includeWorkflow);
+    const files = createTemplateFiles(projectName, dependencyInfo, includeWorkflow, includeLibraryTemplate);
 
     let createdCount = 0;
 
@@ -130,64 +133,79 @@ async function resolveDependencyInfo(): Promise<ResolvedDependencyInfo> {
     }
 }
 
-function createTemplateFiles(projectName: string, dependencyInfo: ResolvedDependencyInfo, includeWorkflow: boolean): Record<string, string> {
-    const manifest = createManifest(projectName, dependencyInfo.engineVersion, dependencyInfo.dependencies);
-    const packageJson = createPackageJson(projectName, dependencyInfo.packageDependencies);
+function createTemplateFiles(
+    projectName: string,
+    dependencyInfo: ResolvedDependencyInfo,
+    includeWorkflow: boolean,
+    includeLibraryTemplate: boolean,
+): Record<string, string> {
+    const libraryPackageName = includeLibraryTemplate ? resolveLibraryPackageName(projectName) : null;
+    const manifest = createManifest(projectName, dependencyInfo.engineVersion, dependencyInfo.dependencies, includeLibraryTemplate);
+    const packageJson = createPackageJson(projectName, dependencyInfo.packageDependencies, includeLibraryTemplate, libraryPackageName);
 
     const files: Record<string, string> = {
-        ".gitignore": "node_modules/\nscripts\n*.mcpack\n*.mcaddon\n",
+        ".gitignore": "node_modules/\nscripts\ndist\n*.mcpack\n*.mcaddon\n",
         ".vscode/settings.json": JSON.stringify(createVsCodeSettings(), null, 2) + "\n",
         ".vscode/launch.json": JSON.stringify(createVsCodeLaunchConfig(manifest), null, 2) + "\n",
-        "README.md": createReadme(projectName),
+        "README.md": createReadme(projectName, includeLibraryTemplate, libraryPackageName),
         LICENSE: createLicense(),
         "manifest.json": JSON.stringify(manifest, null, "\t") + "\n",
         "package.json": JSON.stringify(packageJson, null, 2) + "\n",
-        "tsconfig.json": JSON.stringify(createTsConfig(), null, 2) + "\n",
+        "tsconfig.json": JSON.stringify(createTsConfig(includeLibraryTemplate, libraryPackageName), null, 2) + "\n",
         "tsdown.config.ts": ['import { defineConfig } from "tsdown";', "", "export default defineConfig({});", ""].join("\n"),
-        "src/main.ts":
-            [
-                'import { world } from "@minecraft/server";',
-                "",
-                "world.afterEvents.worldLoad.subscribe(() => {",
-                '    console.log("Hello world!");',
-                "});",
-            ].join("\n") + "\n",
+        "src/main.ts": includeLibraryTemplate ? createLibraryMainSource(libraryPackageName ?? "@scope/sample") : createDefaultMainSource(),
     };
+
+    if (includeLibraryTemplate) {
+        files["package/main.ts"] = createLibraryEntrySource();
+    }
 
     if (includeWorkflow) {
         files[".github/workflows/mcpack.yml"] = createMcpackWorkflow();
+        files[".github/workflows/webhook.yml"] = createWebhookWorkflow();
+        if (includeLibraryTemplate) {
+            files[".github/workflows/publish.yml"] = createPublishWorkflow();
+            files[".github/workflows/ensure-dts-export.js"] = createPublishScript();
+        }
     }
 
     return files;
 }
 
-function createManifest(projectName: string, engineVersion: ManifestVersion, dependencies: ManifestDependency[]): Manifest {
+function createManifest(
+    projectName: string,
+    engineVersion: ManifestVersion,
+    dependencies: ManifestDependency[],
+    includeLibraryTemplate: boolean,
+): Manifest {
+    const suffix = includeLibraryTemplate ? "-lib" : "-beh";
+
     return {
         format_version: 3,
         header: {
-            name: projectName,
-            description: `${projectName} (B)`,
+            name: `${projectName}${suffix}`,
+            description: `${projectName}${suffix}`,
             uuid: randomUUID(),
-            version: [1, 0, 0],
+            version: "0.1.0",
             min_engine_version: engineVersion,
         },
         metadata: {
             authors: ["YOUR NAME HERE"],
             url: "https://example.com/your-project",
             generated_with: {
-                scriptup: ["1.0.0"],
+                "nano191225-scriptup": [VERSION],
             },
         },
         modules: [
             {
                 type: "data",
                 uuid: randomUUID(),
-                version: [1, 0, 0],
+                version: "0.1.0",
             },
             {
                 type: "script",
                 uuid: randomUUID(),
-                version: [1, 0, 0],
+                version: "0.1.0",
                 language: "javascript",
                 entry: "scripts/main.js",
             },
@@ -196,9 +214,15 @@ function createManifest(projectName: string, engineVersion: ManifestVersion, dep
     };
 }
 
-function createPackageJson(projectName: string, dependencies: Record<string, string>): Record<string, unknown> {
+function createPackageJson(
+    projectName: string,
+    dependencies: Record<string, string>,
+    includeLibraryTemplate: boolean,
+    libraryPackageName: string | null,
+): Record<string, unknown> {
     const devDependencies: Record<string, string> = {
-        "@bedrock-apis/env-types": "1.0.0-beta.6",
+        "@nano191225/scriptup": "^1.0.0",
+        "@bedrock-apis/env-types": "^1.0.0-beta.6",
         typescript: "^5.9.3",
         tsdown: "^0.21.2",
     };
@@ -207,31 +231,56 @@ function createPackageJson(projectName: string, dependencies: Record<string, str
         devDependencies[name] = version;
     }
 
+    const files = includeLibraryTemplate ? ["dist", "LICENSE", "README.md"] : ["manifest.json", "scripts", "LICENSE", "README.md"];
+
     const packageJson: Record<string, unknown> = {
         name: normalizePackageName(projectName),
-        version: "1.0.0",
+        version: "0.1.0",
         type: "module",
+        ...(includeLibraryTemplate
+            ? {
+                  exports: {
+                      ".": {
+                          types: "./dist/main.d.ts",
+                          default: "./dist/main.js",
+                      },
+                  },
+                  main: "./dist/main.js",
+                  types: "./dist/main.d.ts",
+                  prepublishOnly: "scriptup build --release && node .github/workflows/ensure-dts-export.js",
+              }
+            : {}),
         scripts: {
             build: "scriptup build --release",
             watch: "scriptup build --watch",
         },
+        dependencies: {},
         devDependencies,
         keywords: ["minecraft", "minecraft-bedrock", "minecraft-script-api", "scriptapi"],
-        files: ["manifest.json", "scripts", "LICENSE", "README.md"],
+        files,
     };
 
     return packageJson;
 }
 
-function createTsConfig(): Record<string, unknown> {
+function createTsConfig(includeLibraryTemplate: boolean, libraryPackageName: string | null): Record<string, unknown> {
+    const compilerOptions: Record<string, unknown> = {
+        strict: true,
+        noLib: true,
+        types: ["@bedrock-apis/env-types"],
+        noEmit: true,
+    };
+
+    if (includeLibraryTemplate && libraryPackageName) {
+        compilerOptions.baseUrl = ".";
+        compilerOptions.paths = {
+            [libraryPackageName]: ["package/main.ts"],
+        };
+    }
+
     return {
-        include: ["src"],
-        compilerOptions: {
-            strict: true,
-            noLib: true,
-            types: ["@bedrock-apis/env-types"],
-            noEmit: true,
-        },
+        include: includeLibraryTemplate ? ["src", "package"] : ["src"],
+        compilerOptions,
     };
 }
 
@@ -277,6 +326,9 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -285,23 +337,30 @@ jobs:
 
     ##############################
 
+    ### When selected package manager, uncomment below.
+
+      - name: You have to select a package manager.
+        run: exit 1
+
     ###   pnpm   ###
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      # - name: Install pnpm
+      #   uses: pnpm/action-setup@v4
+      #   with:
+      #     version: 10
 
-      - name: Use Node.js 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: "pnpm"
+      # - name: Use Node.js 24
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: "24"
+      #     cache: "pnpm"
 
-      - name: Install dependencies
-        run: |
-          pnpm i --frozen-lockfile
+      # - name: Install dependencies
+      #   run: |
+      #     pnpm i --frozen-lockfile
           
-      - name: Build
-        run: pnpm run build
+      # - name: Build
+      #   run: pnpm run build
 
     ###   npm   ###
 
@@ -318,6 +377,24 @@ jobs:
       # - name: Build
       #   run: |
       #     npm run build
+
+    ###   bun   ###
+
+      # - name: Use Node.js 24
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: "24"
+
+      # - name: Install Bun
+      #   uses: oven-sh/setup-bun@v2
+
+      # - name: Install dependencies
+      #   run: |
+      #     bun i --frozen-lockfile
+
+      # - name: Build
+      #   run: |
+      #     bun run build
 
     ###   yarn   ###
 
@@ -343,25 +420,217 @@ jobs:
         id: get-name
         run: |
           name=$(jq -r '.header.name' manifest.json | tr -d '"' | tr ' ' '_')
-          echo "fileName=$name" >> $GITHUB_OUTPUT
+          tag="$GITHUB_REF_NAME"
+          echo "fileName=$name-$tag" >> $GITHUB_OUTPUT
 
       - name: Make Archive
         run: |
           echo "Creating archive: \${{ steps.get-name.outputs.fileName }}"
-          files=$(jq -r '.files[]' package.json | tr '\\n' ' ')
+          files="manifest.json scripts $(jq -r '.files[] | select(. != "manifest.json" and . != "scripts")' package.json | tr '\\n' ' ')"
           zip -r "\${{ steps.get-name.outputs.fileName }}.mcpack" $files
           cp "\${{ steps.get-name.outputs.fileName }}.mcpack" "\${{ steps.get-name.outputs.fileName }}.zip"
 
       - name: Upload Release Asset
         run: gh release upload "$GITHUB_REF_NAME" "\${{ steps.get-name.outputs.fileName }}.mcpack" "\${{ steps.get-name.outputs.fileName }}.zip" --clobber
         env:
-          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}`;
+          GITHUB_TOKEN: \${{ github.token }}`;
 }
 
-function createReadme(projectName: string): string {
-    return [`# ${projectName}`, "", "ScriptAPI addon template generated by scriptup.", "", "## Setup", "", "```bash", "npm install", "```", ""].join(
-        "\n",
-    );
+function createPublishWorkflow(): string {
+    return `name: Publish library
+# Triggered when a GitHub release is published.
+# Uses npm Trusted Publishers (OIDC) — no NPM_TOKEN secret required.
+# See: https://docs.npmjs.com/trusted-publishers#configuring-trusted-publishing
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write  # required for OIDC trusted publishing and provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Ensure export footer in d.ts
+        run: node .github/workflows/ensure-dts-export.js
+
+      - name: Publish package
+        run: pnpm publish --no-git-checks`;
+}
+
+function createWebhookWorkflow(): string {
+    return `name: Discord release webhook
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Post release message to Discord
+        env:
+          WEBHOOK_URL: \${{ secrets.WEBHOOK_URL }}
+          RELEASE_NAME: \${{ github.event.release.name }}
+          RELEASE_BODY: \${{ github.event.release.body }}
+          RELEASE_URL: \${{ github.event.release.html_url }}
+        run: |
+          payload=$(jq -n --arg name "$RELEASE_NAME" --arg body "$RELEASE_BODY" --arg url "$RELEASE_URL" '{content: ("## " + $name + "\\n" + $body + "\\n\\n" + $url)}')
+          curl -sS -X POST \\
+              -H "Content-Type: application/json" \\
+              -d "$payload" \\
+              "$WEBHOOK_URL"
+`;
+}
+
+function createPublishScript(): string {
+    return `import { existsSync, readFileSync, writeFileSync } from "node:fs";
+
+const filePath = "dist/main.d.ts";
+
+if (!existsSync(filePath)) {
+  throw new Error(\`Missing file: \${filePath}\`);
+}
+
+let content = readFileSync(filePath, "utf8");
+const hasFooter = /\\bexport\\s*\\{\\s*\\};?\\s*$/.test(content);
+
+if (!hasFooter) {
+  if (!content.endsWith("\\n")) content += "\\n";
+  content += "export {};\\n";
+  writeFileSync(filePath, content);
+  console.log("Appended export {} to dist/main.d.ts");
+} else {
+  console.log("dist/main.d.ts already ends with export {}");
+}
+`;
+}
+
+function createReadme(projectName: string, includeLibraryTemplate: boolean, libraryPackageName: string | null): string {
+    if (!includeLibraryTemplate) {
+        return [
+            `# ${projectName}`,
+            "",
+            "ScriptAPI addon template generated by scriptup.",
+            "",
+            "## Setup",
+            "",
+            "```bash",
+            "npm install",
+            "```",
+            "",
+        ].join("\n");
+    }
+
+    return [
+        `# ${projectName}`,
+        "",
+        "ScriptAPI addon template generated by scriptup.",
+        "",
+        "## Local library structure",
+        "",
+        "- package/main.ts: local package source",
+        `- src/main.ts: sample usage that imports from ${libraryPackageName ?? "@scope/sample"}`,
+        "",
+        "## Setup",
+        "",
+        "```bash",
+        "npm install",
+        "```",
+        "",
+        "## Publish",
+        "",
+        "### First publish (manual)",
+        "",
+        `1. Update \`name\` and \`version\` in package.json (current import alias: \`${libraryPackageName ?? "@scope/sample"}\`).`,
+        "2. Build and publish:",
+        "",
+        "```bash",
+        "npm run build",
+        "npm publish --access public",
+        "```",
+        "",
+        "### Subsequent publishes (automated via GitHub Actions)",
+        "",
+        "> [!TIP]",
+        "> Using [npm Trusted Publishers](https://docs.npmjs.com/trusted-publishers#configuring-trusted-publishing) removes the need to manage `NPM_TOKEN` in GitHub secrets.",
+        "",
+        "1. On [npmjs.com](https://www.npmjs.com), open your package → **Settings** → **Trusted Publishers**.",
+        "2. Add a trusted publisher:",
+        "   - **GitHub Actions** as the provider",
+        "   - Organization or user: Enter your GitHub username or organization name",
+        "   - Repository: Enter the repository name where the package is located",
+        "   - Workflow filename: \`publish.yml\`",
+        "   - Environment name: Keep empty",
+        "",
+        "3. Once configured, **delete** the `NPM_TOKEN` secret from GitHub repository settings (not needed anymore).",
+        "",
+        "4. Bump \`version\` in package.json, then create a GitHub release → **.github/workflows/publish.yml** runs automatically.",
+        "",
+    ].join("\n");
+}
+
+function createDefaultMainSource(): string {
+    return [
+        'import { world } from "@minecraft/server";',
+        "",
+        "world.afterEvents.worldLoad.subscribe(() => {",
+        '    console.log("Hello world!");',
+        "});",
+        "",
+    ].join("\n");
+}
+
+function createLibraryMainSource(libraryPackageName: string): string {
+    return [
+        'import { world } from "@minecraft/server";',
+        `import { sum } from "${libraryPackageName}";`,
+        "",
+        "world.afterEvents.worldLoad.subscribe(() => {",
+        "    const result = sum(1, 2);",
+        "    console.log(`sum(1, 2) = ${result}`);",
+        "});",
+        "",
+    ].join("\n");
+}
+
+function createLibraryEntrySource(): string {
+    return ["export function sum(a: number, b: number): number {", "    return a + b;", "}", ""].join("\n");
+}
+
+function resolveLibraryPackageName(projectName: string): string {
+    const trimmed = projectName.trim();
+    return trimmed.length > 0 ? trimmed : "@scope/sample";
 }
 
 function createLicense(): string {
