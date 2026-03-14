@@ -2,6 +2,10 @@
 
 # scriptup
 
+[![Release](https://img.shields.io/github/v/release/Nano191225/scriptup?display_name=tag)](https://github.com/Nano191225/scriptup/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+
 Minecraft Bedrock ScriptAPI 開発向けの CLI です。
 
 scriptup は、@minecraft/* の更新、ScriptAPI での外部ライブラリ利用、そして ScriptAPI 用ライブラリ作成の初期構築を素早く行えるようにします。

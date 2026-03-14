@@ -2,6 +2,10 @@ English | [日本語](README.ja.md)
 
 # scriptup
 
+[![Release](https://img.shields.io/github/v/release/Nano191225/scriptup?display_name=tag)](https://github.com/Nano191225/scriptup/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+
 CLI for Minecraft Bedrock ScriptAPI development.
 
 scriptup helps you keep @minecraft/\* modules current, use external libraries in ScriptAPI projects, and scaffold projects and library-ready structures quickly.
