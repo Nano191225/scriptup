@@ -52,8 +52,9 @@ program
 program
     .command("init")
     .description("Initialize a ScriptAPI project in the current directory")
+    .option("--lib", "Include local library scaffolding under package/")
     .option("--no-workflow", "Do not create the GitHub Actions workflow files")
-    .action(async (options: { workflow?: boolean }) => {
+    .action(async (options: { lib?: boolean; workflow?: boolean }) => {
         await init(undefined, options);
     });
 

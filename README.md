@@ -95,6 +95,7 @@ Initialize the current directory as a ScriptAPI project.
 
 Options:
 
+- --lib: Include local library scaffold under package/
 - --no-workflow: Do not generate GitHub Actions workflow files
 
 What it does:

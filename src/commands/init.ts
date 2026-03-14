@@ -6,6 +6,7 @@ import { detectPackageManager, PackageManager } from "../utils/package-manager.j
 import { scaffoldProject } from "../utils/scaffold.js";
 
 interface InitCommandOptions {
+    lib?: boolean;
     workflow?: boolean;
 }
 
@@ -14,6 +15,7 @@ export async function init(targetDir = process.cwd(), options: InitCommandOption
 
     await scaffoldProject({
         targetDir: resolvedTargetDir,
+        lib: options.lib,
         workflow: options.workflow,
     });
 

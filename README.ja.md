@@ -95,6 +95,7 @@ scriptup 2.0.0-beta
 
 オプション:
 
+- --lib: package/ 配下にローカルライブラリ雛形を含める
 - --no-workflow: GitHub Actions workflow を生成しない
 
 実行内容:
