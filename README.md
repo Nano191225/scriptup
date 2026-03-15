@@ -147,6 +147,7 @@ Build behavior summary:
     - src/index.ts
     - entry in tsdown.config.ts
 - Release mode also builds package/\*\*/\*.ts into dist/ when package/ exists
+- If disallowed external imports remain in output (outside allowed @minecraft/\*), scriptup warns with both the likely cause package and remaining dependency names
 
 ## Typical Workflows
 

@@ -147,6 +147,7 @@ tsdown で現在の ScriptAPI プロジェクトをビルドします。
     - src/index.ts
     - tsdown.config.ts の entry
 - release モードでは package/ が存在する場合に package/\*\*/\*.ts も dist/ へ追加ビルド
+- 許可されない外部 import（許可対象の @minecraft/\* 以外）が出力に残っている場合、原因候補パッケージ名と残存依存名の両方を警告表示
 
 ## 典型的な使い方
 

@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { getManifest, isScriptManifestModule } from "../utils/manifest.js";
 import * as logger from "../utils/logger.js";
+import { checkExternalDependencies } from "../utils/dependency-checker.js";
 import { build as tsdownBuild, mergeConfig, InlineConfig, UserConfig } from "tsdown";
 import { pathToFileURL } from "node:url";
 
@@ -74,6 +75,8 @@ export async function build(options: BuildCommandOptions = {}): Promise<void> {
     if (!isWatch) {
         ensureBuildOutput(outputEntry);
     }
+
+    await checkExternalDependencies(outputEntry, userConfig.platform as string | undefined);
 
     logger.done(`Build complete: ${path.relative(process.cwd(), outputEntry)}`);
 }
@@ -175,7 +178,7 @@ async function buildLocalPackageDist(): Promise<void> {
             // neverBundle: /^@minecraft\/(?!math(?:\/|$)|vanilla-data(?:\/|$))/,
             // neverBundle: "**/*",
             // onlyBundle: false,
-        }
+        },
     };
 
     await tsdownBuild(packageBuildConfig);

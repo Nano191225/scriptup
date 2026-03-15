@@ -262,7 +262,7 @@ function createPackageJson(
         },
         dependencies: {},
         devDependencies,
-        keywords: ["minecraft", "minecraft-bedrock", "minecraft-script-api", "scriptapi"],
+        keywords: ["minecraft", "minecraft-bedrock", "minecraft-script-api", "script-api"],
         files,
     };
 
