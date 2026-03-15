@@ -21,8 +21,9 @@ program
 program
     .command("stable")
     .description("Install the latest stable version modules")
-    .action(async () => {
-        await stable();
+    .option("-f, --force", "Update modules even if the current version is beta")
+    .action(async (options: { force?: boolean }) => {
+        await stable(options);
     });
 
 program

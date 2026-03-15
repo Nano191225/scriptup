@@ -4,7 +4,7 @@ import { getVersions, extractMcVersion, extractModuleVersion } from "../utils/ve
 import { detectPackageManager, installPackage } from "../utils/package-manager.js";
 import * as logger from "../utils/logger.js";
 
-export async function stable(): Promise<void> {
+export async function stable(options: { force?: boolean } = {}): Promise<void> {
     const spinner = ora("Fetching Minecraft version...").start();
 
     const mcVersion = await getStableMinecraftVersion();
@@ -24,6 +24,8 @@ export async function stable(): Promise<void> {
     const dependencies = manifest.dependencies?.filter(isManifestModuleDependency) ?? [];
 
     for (const dependency of dependencies) {
+        const isBeta = String(dependency.version) === "beta";
+
         const versions = await getVersions(dependency.module_name);
         const matched = versions.find((v) => v.includes(mcVersion));
 
@@ -32,8 +34,10 @@ export async function stable(): Promise<void> {
             process.exit(1);
         }
 
-        dependency.version = extractModuleVersion(matched);
-        logger.log(`${dependency.module_name}: ${matched}`);
+        if (!isBeta || options.force) {
+            dependency.version = extractModuleVersion(matched);
+        }
+        logger.log(`${dependency.module_name}: ${matched}${isBeta && !options.force ? " (manifest not updated, current version is beta)" : ""}`);
 
         modules.push({ name: dependency.module_name, version: matched });
     }
