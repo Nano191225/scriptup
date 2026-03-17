@@ -510,18 +510,32 @@ jobs:
     timeout-minutes: 5
 
     steps:
+      - name: Determine mention role
+        id: mention
+        env:
+          TAG: \${{ github.event.release.tag_name }}
+        run: |
+          if [[ "$TAG" == *alpha* ]]; then
+            echo "role=@example-alpha" >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" == *beta* ]]; then
+            echo "role=@example-beta" >> "$GITHUB_OUTPUT"
+          else
+            echo "role=@example-stable" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Post release message to Discord
         env:
           WEBHOOK_URL: \${{ secrets.WEBHOOK_URL }}
           RELEASE_NAME: \${{ github.event.release.name }}
           RELEASE_BODY: \${{ github.event.release.body }}
           RELEASE_URL: \${{ github.event.release.html_url }}
+          MENTION_ROLE: \${{ steps.mention.outputs.role }}
         run: |
-          payload=$(jq -n --arg name "$RELEASE_NAME" --arg body "$RELEASE_BODY" --arg url "$RELEASE_URL" '{content: ("## " + $name + "\\n" + $body + "\\n\\n" + $url)}')
+          payload=$(jq -n --arg name "$RELEASE_NAME" --arg body "$RELEASE_BODY" --arg url "$RELEASE_URL" --arg role "$MENTION_ROLE" '{content: ($role + "\\n## " + $name + "\\n" + $body + "\\n\\n-# " + $url)}')
           curl -sS -X POST \\
-              -H "Content-Type: application/json" \\
-              -d "$payload" \\
-              "$WEBHOOK_URL"
+            -H "Content-Type: application/json" \\
+            -d "$payload" \\
+            "$WEBHOOK_URL"
 `;
 }
 

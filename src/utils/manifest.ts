@@ -103,15 +103,78 @@ export interface Manifest {
 }
 
 export function getManifest(): Manifest {
-    const manifestPath = path.resolve("manifest.json");
+    const pkgDir = findPackageJsonDir() ?? process.cwd();
+    const root = findManifest(pkgDir);
 
-    if (!fs.existsSync(manifestPath)) {
-        error("manifest.json not found.");
+    if (!root) {
+        error("manifest.json not found in the current directory or up to 3 parent directories.");
         process.exit(1);
     }
 
+    if (pkgDir !== process.cwd()) {
+        process.chdir(pkgDir);
+    }
+
+    const manifestPath = path.join(root, "manifest.json");
     const raw = fs.readFileSync(manifestPath, "utf-8");
     return JSON.parse(raw) as Manifest;
+}
+
+// Find package.json by scanning upward from cwd (up to 3 levels).
+function findPackageJsonDir(from: string = process.cwd()): string | null {
+    let current = from;
+    for (let i = 0; i <= 3; i++) {
+        if (fs.existsSync(path.join(current, "package.json"))) {
+            return current;
+        }
+        const parent = path.dirname(current);
+        if (parent === current) break;
+        current = parent;
+    }
+    return null;
+}
+
+// Scan downward (depth-first) for manifest.json, up to maxDepth levels.
+function scanDown(dir: string, depth: number, maxDepth: number): string | null {
+    if (depth > maxDepth) return null;
+
+    if (fs.existsSync(path.join(dir, "manifest.json"))) {
+        return dir;
+    }
+
+    let entries: fs.Dirent[];
+    try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+        return null;
+    }
+
+    for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        const result = scanDown(path.join(dir, entry.name), depth + 1, maxDepth);
+        if (result) return result;
+    }
+
+    return null;
+}
+
+export function findManifest(pkgDir: string): string | null {
+    // 1. Scan downward from package.json directory.
+    const downResult = scanDown(pkgDir, 0, 3);
+    if (downResult) return downResult;
+
+    // 2. Scan upward from package.json directory.
+    let current = pkgDir;
+    for (let i = 0; i <= 3; i++) {
+        if (fs.existsSync(path.join(current, "manifest.json"))) {
+            return current;
+        }
+        const parent = path.dirname(current);
+        if (parent === current) break;
+        current = parent;
+    }
+
+    return null;
 }
 
 export function updateManifest(manifest: Manifest): void {
