@@ -18,11 +18,12 @@ scriptup helps you keep @minecraft/\* modules current, use external libraries in
 
 ## Features
 
-- Update ScriptAPI module versions in manifest.json and install matching package versions
-- Create a new ScriptAPI project directly in development_behavior_packs
+- Scaffold core project files (manifest.json, tsconfig.json, src/main.ts, etc.)
 - Initialize the current directory as a ScriptAPI project
+- Migrate an existing project to the latest scaffold template
 - Build ScriptAPI code with tsdown using manifest.json script entry output
 - Optional local library scaffold for creating reusable ScriptAPI packages
+- Interactive package manager selection that configures packageManager and mcpack.yml
 
 ## Requirements
 
@@ -97,6 +98,8 @@ Options:
 
 - --lib: Include local library scaffold under package/
 - --no-workflow: Do not generate GitHub Actions workflow files
+- -i, --interactive: Interactively select a package manager (writes `packageManager` field and configures mcpack.yml)
+- -m, --migrate: Migrate an existing project to the latest scaffold template
 
 What it does:
 
@@ -106,6 +109,17 @@ What it does:
     - build: scriptup build --release
     - watch: scriptup build --watch
 - Installs required dev dependencies
+
+#### Migration mode (--migrate)
+
+Re-applies the latest scaffold to an existing project while preserving your customizations.
+
+Before scaffolding, existing template files are backed up to `.backup/`. After scaffolding:
+
+- **manifest.json**: UUIDs, name, and version are carried over from the old file. Array-format versions (`[x, y, z]`) are automatically converted to `"x.y.z"`. The `generated_with` field is refreshed from the new template.
+- **package.json**: name, version, packageManager, and all dependencies and scripts are merged (old values are kept; new template values fill any missing keys).
+- **Other template files** (.gitignore, README.md, etc.): restored verbatim from backup.
+- **launch.json and tsconfig.json**: always overwritten with the latest template.
 
 ### scriptup new <project-name>
 
@@ -119,6 +133,7 @@ Options:
 - --lib: Include local library scaffold under package/
 - --no-link: Do not create behavior-pack link when --dir is used
 - --no-workflow: Do not generate GitHub Actions workflow files
+- -i, --interactive: Interactively select a package manager (writes `packageManager` field and configures mcpack.yml)
 
 Default target directories:
 
@@ -155,6 +170,14 @@ Build behavior summary:
 
 ```bash
 scriptup init
+scriptup stable
+scriptup build
+```
+
+### Migrate an existing project to the latest template
+
+```bash
+scriptup init --migrate --interactive
 scriptup stable
 scriptup build
 ```

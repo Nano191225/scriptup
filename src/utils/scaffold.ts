@@ -144,7 +144,7 @@ function createTemplateFiles(
     includeLibraryTemplate: boolean,
 ): Record<string, string> {
     const libraryPackageName = includeLibraryTemplate ? resolveLibraryPackageName(projectName) : null;
-    const manifest = createManifest(projectName, dependencyInfo.engineVersion, dependencyInfo.dependencies, includeLibraryTemplate);
+    const manifest = createManifest(projectName, directoryName, dependencyInfo.engineVersion, dependencyInfo.dependencies, includeLibraryTemplate);
     const packageJson = createPackageJson(projectName, directoryName, dependencyInfo.packageDependencies, includeLibraryTemplate, libraryPackageName);
 
     const files: Record<string, string> = {
@@ -178,11 +178,14 @@ function createTemplateFiles(
 
 function createManifest(
     projectName: string,
+    directoryName: string,
     engineVersion: ManifestVersion,
     dependencies: ManifestDependency[],
     includeLibraryTemplate: boolean,
 ): Manifest {
     const suffix = includeLibraryTemplate ? "-lib" : "-beh";
+    const username = getUsername();
+    const author = username ? username : "{{author}}";
 
     return {
         format_version: 3,
@@ -194,8 +197,8 @@ function createManifest(
             min_engine_version: engineVersion,
         },
         metadata: {
-            authors: ["YOUR NAME HERE"],
-            url: "https://example.com/your-project",
+            authors: [author],
+            url: `https://github.com/${username}/${directoryName}`,
             generated_with: {
                 "nano191225-scriptup": [VERSION],
             },
@@ -444,6 +447,47 @@ jobs:
         run: gh release upload "$GITHUB_REF_NAME" "\${{ steps.get-name.outputs.fileName }}.mcpack" "\${{ steps.get-name.outputs.fileName }}.zip" --clobber
         env:
           GITHUB_TOKEN: \${{ github.token }}`;
+}
+
+function createMcpackWorkflowForPm(pm: string): string {
+    const baseWorkflow = createMcpackWorkflow();
+
+    if (!baseWorkflow.includes(`###   ${pm}   ###`)) {
+        logger.warn(`mcpack workflow does not contain section for ${pm}. No changes were made to mcpack.yml.`);
+        return baseWorkflow;
+    }
+
+    const workflow = baseWorkflow.split("\n");
+    let isCommenting = false;
+    let isUncommenting = false;
+
+    const comment = (line: string): string => line.replace(/^(\s*)/, "$1# ");
+    const uncomment = (line: string): string => line.replace(/^(\s*)#\s?/, "$1");
+    
+    for (let i = 0; i < workflow.length; i++) {
+        let line = workflow[i];
+        if (line.includes("###")) {
+            isCommenting = false;
+            isUncommenting = false;
+        }
+
+        if (!line.includes("###") && line.trim().length > 0) {
+            if (isCommenting) workflow[i] = comment(line);
+            if (isUncommenting) workflow[i] = uncomment(line);
+        }
+
+        if (line.includes(`### When`)) isCommenting = true;
+        if (line.includes(`###   ${pm}   ###`)) isUncommenting = true;
+    }
+
+    return workflow.join("\n");
+}
+
+export function updateMcpackWorkflow(targetDir: string, pm: string): void {
+    const mcpackPath = path.join(targetDir, ".github/workflows/mcpack.yml");
+    if (!fs.existsSync(mcpackPath)) return;
+    fs.writeFileSync(mcpackPath, createMcpackWorkflowForPm(pm), "utf-8");
+    logger.log(`Updated mcpack.yml for ${pm}`);
 }
 
 function createPublishWorkflow(): string {

@@ -1,6 +1,6 @@
 {
     "name": "@nano191225/scriptup",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "description": "ScriptAPI version updater for Minecraft Bedrock",
     "license": "MIT",
     "author": "Nano191225",
@@ -38,6 +38,8 @@
         "registry": "https://registry.npmjs.org"
     },
     "dependencies": {
+        "@antfu/ni": "^29.0.0",
+        "@inquirer/prompts": "^8.3.2",
         "chalk": "^5.4.1",
         "commander": "^13.1.0",
         "ora": "^8.2.0",

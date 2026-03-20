@@ -2,6 +2,8 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as logger from "../utils/logger.js";
+import { selectPackageManager } from "../utils/package-manager.js";
+import { installInitDependencies } from "./init.js";
 import { ensureNewProjectTarget, openProject, scaffoldProject } from "../utils/scaffold.js";
 
 interface NewCommandOptions {
@@ -11,6 +13,7 @@ interface NewCommandOptions {
     lib?: boolean;
     link?: boolean;
     workflow?: boolean;
+    interactive?: boolean;
 }
 
 const supportedEditors = ["code", "code-insiders"];
@@ -28,6 +31,11 @@ export async function createNewProject(projectName: string, options: NewCommandO
         lib: options.lib,
         workflow: options.workflow,
     });
+
+    if (options.interactive) {
+        await selectPackageManager(targetDir);
+        await installInitDependencies(targetDir);
+    }
 
     if (options.dir && options.link !== false) {
         const linkPath = path.join(behaviorPacksDir, directoryName);

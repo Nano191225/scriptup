@@ -55,7 +55,9 @@ program
     .description("Initialize a ScriptAPI project in the current directory")
     .option("--lib", "Include local library scaffolding under package/")
     .option("--no-workflow", "Do not create the GitHub Actions workflow files")
-    .action(async (options: { lib?: boolean; workflow?: boolean }) => {
+    .option("-i, --interactive", "Interactively select a package manager")
+    .option("-m, --migrate", "Migrate existing project files to the latest template")
+    .action(async (options: { lib?: boolean; workflow?: boolean; interactive?: boolean; migrate?: boolean }) => {
         await init(undefined, options);
     });
 
@@ -69,10 +71,11 @@ program
     .option("--lib", "Include local library scaffolding under package/")
     .option("--no-link", "Do not create a link in the behavior packs directory when --dir is used")
     .option("--no-workflow", "Do not create the GitHub Actions workflow files")
+    .option("-i, --interactive", "Interactively select a package manager")
     .action(
         async (
             projectName: string,
-            options: { open?: string; preview?: boolean; dir?: string; lib?: boolean; link?: boolean; workflow?: boolean },
+            options: { open?: string; preview?: boolean; dir?: string; lib?: boolean; link?: boolean; workflow?: boolean; interactive?: boolean },
         ) => {
             await createNewProject(projectName, options);
         },
